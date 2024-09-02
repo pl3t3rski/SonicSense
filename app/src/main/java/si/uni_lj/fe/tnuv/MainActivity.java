@@ -2,8 +2,8 @@ package si.uni_lj.fe.tnuv;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -25,25 +25,26 @@ import androidx.core.content.ContextCompat;
 import com.mapbox.geojson.Point;
 import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.MapView;
-import com.mapbox.maps.Style;
-import com.mapbox.maps.plugin.annotation.AnnotationPlugin;
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions;
-import com.mapbox.maps.plugin.annotation.AnnotationPlugin;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
 
 import si.uni_lj.fe.tnuv.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String PREFS_NAME = "SonicSensePrefs";
+    private static final String MAX_DB_KEY = "maxDB";
+    private static final String RECORDING_COUNT_KEY = "recordingCount";
     private static final int REQUEST_CODE = 100;
+    private static final int SAMPLE_RATE = 44100;
+    private static final int RECORD_DURATION_MS = 3000; // Duration in milliseconds (3 seconds)
+    private static final String TAG = "MainActivity";
+
     private boolean isRecording = false;
     private AudioRecord audioRecord;
     private int bufferSize;
     private TextView audioLevelTextView;
-    private static final int SAMPLE_RATE = 44100;
-    private static final int RECORD_DURATION_MS = 3000; // Duration in milliseconds (3 seconds)
     private float maxSoundLevel = Float.MIN_VALUE;
+    private float overallMaxDB = Float.MIN_VALUE;
     private MapView mapView;
     private PointAnnotationManager pointAnnotationManager;
 
@@ -56,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         mapView = binding.mapView;
-
 
         // Setup Search Bar
         EditText searchBar = findViewById(R.id.search_bar);
@@ -79,6 +79,10 @@ public class MainActivity extends AppCompatActivity {
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT);
 
+        // Load the overall max dB from SharedPreferences
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        overallMaxDB = prefs.getFloat(MAX_DB_KEY, Float.MIN_VALUE);
+
         // Check for RECORD_AUDIO permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -88,10 +92,6 @@ public class MainActivity extends AppCompatActivity {
             initializeAudio();
         }
     }
-
-
-
-
 
     private void resetMapView() {
         mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_CODE);
         } else {
-            maxSoundLevel = Float.MIN_VALUE; // Reset the max sound level
+            maxSoundLevel = Float.MIN_VALUE; // Reset the max sound level for this recording session
             isRecording = true;
             new Thread(new AudioRecorder()).start();
 
@@ -138,6 +138,8 @@ public class MainActivity extends AppCompatActivity {
                 stopRecording();
                 audioLevelTextView.setText(String.format("Max Sound Level: %.2f dB", maxSoundLevel));
                 audioLevelTextView.setVisibility(View.VISIBLE);  // Make the TextView visible
+                onRecordingComplete();
+                Log.d(TAG, "Recording stopped and onRecordingComplete called");
             }, RECORD_DURATION_MS);
         }
     }
@@ -156,6 +158,17 @@ public class MainActivity extends AppCompatActivity {
                 maxSoundLevel = soundLevel;
             }
         });
+    }
+
+    private void updateOverallMaxDB(float currentMaxDB) {
+        if (currentMaxDB > overallMaxDB) {
+            overallMaxDB = currentMaxDB;
+            // Save to SharedPreferences
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putFloat(MAX_DB_KEY, overallMaxDB);
+            editor.apply();
+        }
     }
 
     private float calculateSoundLevel(short[] buffer, int readSize) {
@@ -210,6 +223,22 @@ public class MainActivity extends AppCompatActivity {
         } catch (SecurityException e) {
             Toast.makeText(this, "Permission required for audio recording", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void incrementRecordingCount() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int currentCount = prefs.getInt(RECORDING_COUNT_KEY, 0);
+        int newCount = currentCount + 1;
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(RECORDING_COUNT_KEY, newCount);
+        editor.apply();
+        Log.d(TAG, "Recording count incremented. New count: " + newCount);
+    }
+
+    private void onRecordingComplete() {
+        updateOverallMaxDB(maxSoundLevel);
+        incrementRecordingCount();
+        Log.d(TAG, "Recording completed. Max dB: " + maxSoundLevel);
     }
 
     @Override

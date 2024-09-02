@@ -2,46 +2,76 @@ package si.uni_lj.fe.tnuv;
 
 import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-
-import android.view.View;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
-
+import android.content.SharedPreferences;
+import android.widget.TextView;
 
 public class ProfileActivity extends AppCompatActivity {
+
+    private static final String PREFS_NAME = "SonicSensePrefs";
+    private static final String RECORDING_COUNT_KEY = "recordingCount";
+    private static final String MAX_DB_KEY = "maxDB";
+    private static final String TAG = "ProfileActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_profile);
 
-        Button btnBack = findViewById(R.id.buttonBack);
+        setupBackButton();
+        displayUserInfo();
+        updateMaxDBAndContributions();
+        setBadgeIcons();
+    }
 
+    private void setupBackButton() {
+        Button btnBack = findViewById(R.id.buttonBack);
         btnBack.setOnClickListener(v -> {
-            // Handle android button click
             Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
             startActivity(intent);
         });
+    }
 
+    private void displayUserInfo() {
+        TextView nameTextView = findViewById(R.id.textView2);
+        TextView emailTextView = findViewById(R.id.textView3);
+        TextView bioTextView = findViewById(R.id.textView3);
+        ImageView profileImageView = findViewById(R.id.imageView8);
 
-        ImageView card1Icon = findViewById(R.id.card1).findViewById(R.id.card_icon);
-        card1Icon.setImageResource(R.mipmap.crying); // Replace with your own icon
+        nameTextView.setText("Guissepe");
+        emailTextView.setText("guissepe@hotmail.com");
+        bioTextView.setText("Bio about me");
+        profileImageView.setImageResource(R.drawable.baseline_account_circle_24);
+    }
 
-        // Change the icon for the second card
-        ImageView card2Icon = findViewById(R.id.card2).findViewById(R.id.card_icon);
-        card2Icon.setImageResource(R.mipmap.laughter); // Replace with your own icon
+    private void updateMaxDBAndContributions() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        float maxDB = prefs.getFloat(MAX_DB_KEY, 0f);
+        int recordingCount = prefs.getInt(RECORDING_COUNT_KEY, 0);
 
-        ImageView card3Icon = findViewById(R.id.card3).findViewById(R.id.card_icon);
-        card3Icon.setImageResource(R.mipmap.music); // Replace with your own icon
+        Log.d(TAG, "Retrieved values - Max dB: " + maxDB + ", Recording Count: " + recordingCount);
 
-        ImageView card4Icon = findViewById(R.id.card4).findViewById(R.id.card_icon);
-        card4Icon.setImageResource(R.mipmap.drums); // Replace with your own icon
+        TextView maxDBTextView = findViewById(R.id.maxDb);
+        TextView contributionsTextView = findViewById(R.id.contributionsView);
+        TextView thankYouTextView = findViewById(R.id.thankyouView);
 
-        ImageView card5Icon = findViewById(R.id.card5).findViewById(R.id.card_icon);
-        card5Icon.setImageResource(R.mipmap.plane); // Replace with your own icon
+        maxDBTextView.setText(String.format("Max dB: %.1f dB", maxDB));
+        contributionsTextView.setText(String.format("Your contributions: %d recordings", recordingCount));
+        thankYouTextView.setText("Thank you for each of them!\nYou have helped the ears of many");
+
+        Log.d(TAG, "UI updated with max dB and recording count");
+    }
+
+    private void setBadgeIcons() {
+        int[] cardIds = {R.id.card1, R.id.card2, R.id.card3, R.id.card4, R.id.card5};
+        int[] iconIds = {R.mipmap.crying, R.mipmap.laughter, R.mipmap.music, R.mipmap.drums, R.mipmap.plane};
+
+        for (int i = 0; i < cardIds.length; i++) {
+            ImageView cardIcon = findViewById(cardIds[i]).findViewById(R.id.card_icon);
+            cardIcon.setImageResource(iconIds[i]);
+        }
     }
 }
