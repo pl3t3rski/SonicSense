@@ -30,7 +30,6 @@ import com.mapbox.maps.plugin.annotation.AnnotationPlugin;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions;
 import com.mapbox.maps.plugin.annotation.AnnotationPlugin;
-import com.mapbox.maps.plugin.annotation.AnnotationPluginImplKt;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
 
 import si.uni_lj.fe.tnuv.databinding.ActivityMainBinding;
@@ -58,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
 
         mapView = binding.mapView;
 
-        mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS, this::onStyleLoaded);
 
         // Setup Search Bar
         EditText searchBar = findViewById(R.id.search_bar);
@@ -91,29 +89,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void onStyleLoaded(Style style) {
-        createPointAnnotationManager();
-        addMarkerToMap(Point.fromLngLat(-98.0, 39.5)); // Example point, adjust as needed
-        resetMapView();
-    }
 
-    private void createPointAnnotationManager() {
-        AnnotationPlugin annotationPlugin = AnnotationPluginImplKt.getAnnotations(mapView);
-        if (annotationPlugin != null) {
-            pointAnnotationManager = annotationPlugin.createPointAnnotationManager();
-        } else {
-            Log.e("MainActivity", "Failed to get Annotation plugin");
-        }
-    }
 
-    private void addMarkerToMap(Point point) {
-        if (pointAnnotationManager != null) {
-            PointAnnotationOptions pointAnnotationOptions = new PointAnnotationOptions()
-                    .withPoint(point)
-                    .withIconImage(BitmapFactory.decodeResource(getResources(), R.drawable.red_marker));
-            pointAnnotationManager.create(pointAnnotationOptions);
-        }
-    }
+
 
     private void resetMapView() {
         mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
