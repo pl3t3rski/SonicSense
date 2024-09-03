@@ -5,4 +5,6 @@
     <color name="badge_achieved_yellow">#ebd637</color>
     <color name="red">#bf1029</color>
     <color name="green">#056517</color>
+    <color name="editBackgroundColor">#E0F7FA</color>
+    <color name="editTextColor">#006064</color>
 </resources>

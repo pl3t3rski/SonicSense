@@ -8,45 +8,85 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.content.SharedPreferences;
 import android.widget.TextView;
+import android.text.InputType;
+import android.view.inputmethod.EditorInfo;
+import android.graphics.Color;
+import androidx.core.content.ContextCompat;
 
 public class ProfileActivity extends AppCompatActivity {
 
     private static final String PREFS_NAME = "SonicSensePrefs";
     private static final String RECORDING_COUNT_KEY = "recordingCount";
     private static final String MAX_DB_KEY = "maxDB";
+    private static final String USER_NAME_KEY = "userName";
+    private static final String USER_BIO_KEY = "userBio";
     private static final String TAG = "ProfileActivity";
+
+    private EditText nameEditText, bioEditText;
+    private TextView emailTextView;
+    private ImageView profileImageView;
+    private TextView maxDBTextView, contributionsTextView, thankYouTextView;
+    private Button editButton, saveButton;
+    private View statsCardView, badgesSection;
+
+    private boolean isEditMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
+        initializeViews();
         setupBackButton();
-        displayUserInfo();
+        loadUserInfo();
         updateMaxDBAndContributions();
         setBadgeIcons();
+        setupEditButton();
+    }
+
+    private void initializeViews() {
+        nameEditText = findViewById(R.id.nameEditText);
+        emailTextView = findViewById(R.id.emailTextView);
+        bioEditText = findViewById(R.id.bioEditText);
+        profileImageView = findViewById(R.id.profileImageView);
+        maxDBTextView = findViewById(R.id.maxDb);
+        contributionsTextView = findViewById(R.id.contributionsView);
+        thankYouTextView = findViewById(R.id.thankyouView);
+        editButton = findViewById(R.id.editButton);
+        saveButton = findViewById(R.id.saveButton);
+        statsCardView = findViewById(R.id.statsCardView);
+        badgesSection = findViewById(R.id.badgesSection);
+
+        // Set up EditTexts to behave like TextViews initially
+        nameEditText.setInputType(InputType.TYPE_NULL);
+        nameEditText.setTextIsSelectable(true);
+        bioEditText.setInputType(InputType.TYPE_NULL);
+        bioEditText.setTextIsSelectable(true);
     }
 
     private void setupBackButton() {
         Button btnBack = findViewById(R.id.buttonBack);
-        btnBack.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
-            startActivity(intent);
-        });
+        btnBack.setOnClickListener(v -> navigateToMainActivity());
     }
 
-    private void displayUserInfo() {
-        TextView nameTextView = findViewById(R.id.textView2);
-        TextView emailTextView = findViewById(R.id.textView3);
-        TextView bioTextView = findViewById(R.id.textView3);
-        ImageView profileImageView = findViewById(R.id.imageView8);
+    private void navigateToMainActivity() {
+        Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
+    }
 
-        nameTextView.setText("Guissepe");
-        emailTextView.setText("guissepe@hotmail.com");
-        bioTextView.setText("Bio about me");
+    private void loadUserInfo() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String userName = prefs.getString(USER_NAME_KEY, "Giuseppe");
+        String userBio = prefs.getString(USER_BIO_KEY, "Bio about me");
+
+        nameEditText.setText(userName);
+        bioEditText.setText(userBio);
+        emailTextView.setText("giuseppe@hotmail.com");
         profileImageView.setImageResource(R.drawable.baseline_account_circle_24);
     }
 
@@ -56,10 +96,6 @@ public class ProfileActivity extends AppCompatActivity {
         int recordingCount = prefs.getInt(RECORDING_COUNT_KEY, 0);
 
         Log.d(TAG, "Retrieved values - Max dB: " + maxDB + ", Recording Count: " + recordingCount);
-
-        TextView maxDBTextView = findViewById(R.id.maxDb);
-        TextView contributionsTextView = findViewById(R.id.contributionsView);
-        TextView thankYouTextView = findViewById(R.id.thankyouView);
 
         maxDBTextView.setText(String.format("Max dB: %.1f dB", maxDB));
         contributionsTextView.setText(String.format("Your contributions: %d recordings", recordingCount));
@@ -87,20 +123,20 @@ public class ProfileActivity extends AppCompatActivity {
         };
 
         for (int i = 0; i < cardIds.length; i++) {
-            View cardView = findViewById(cardIds[i]);
-            ImageView cardIcon = cardView.findViewById(R.id.card_icon);
-            cardIcon.setImageResource(iconIds[i]);
+            setupBadgeCard(cardIds[i], iconIds[i], badgeTitles[i], badgeDescriptions[i], i < 3);
+        }
+    }
 
-            final int index = i;
-            cardView.setOnClickListener(v -> showBadgeDescription(badgeTitles[index], badgeDescriptions[index]));
+    private void setupBadgeCard(int cardId, int iconId, String title, String description, boolean isAchieved) {
+        View cardView = findViewById(cardId);
+        ImageView cardIcon = cardView.findViewById(R.id.card_icon);
+        cardIcon.setImageResource(iconId);
 
-            if (i >= 3) {
-                cardIcon.setAlpha(0.1f);
-            } else {
-                cardIcon.setAlpha(1.0f);
-                // Set yellow background for achieved badges
-                cardView.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_light));
-            }
+        cardView.setOnClickListener(v -> showBadgeDescription(title, description));
+
+        cardIcon.setAlpha(isAchieved ? 1.0f : 0.1f);
+        if (isAchieved) {
+            cardView.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_light));
         }
     }
 
@@ -116,12 +152,72 @@ public class ProfileActivity extends AppCompatActivity {
         descriptionView.setText(description);
         dismissButton.setOnClickListener(v -> dialog.dismiss());
 
-        // Set the dialog width to 90% of the screen width
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.copyFrom(dialog.getWindow().getAttributes());
         lp.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.9);
         dialog.getWindow().setAttributes(lp);
 
         dialog.show();
+    }
+
+    private void setupEditButton() {
+        editButton.setOnClickListener(v -> toggleEditMode());
+        saveButton.setOnClickListener(v -> saveProfile());
+    }
+
+    private void toggleEditMode() {
+        isEditMode = !isEditMode;
+        if (isEditMode) {
+            nameEditText.setInputType(InputType.TYPE_CLASS_TEXT);
+            bioEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            nameEditText.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+            bioEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+
+            nameEditText.setFocusableInTouchMode(true);
+            bioEditText.setFocusableInTouchMode(true);
+
+            editButton.setVisibility(View.GONE);
+            saveButton.setVisibility(View.VISIBLE);
+            saveButton.setAlpha(0.75f);  // Lower opacity in edit mode
+
+            // Change background and text color for edit mode
+            int editBackgroundColor = ContextCompat.getColor(this, R.color.editBackgroundColor);
+            int editTextColor = ContextCompat.getColor(this, R.color.editTextColor);
+
+            nameEditText.setBackgroundColor(editBackgroundColor);
+            bioEditText.setBackgroundColor(editBackgroundColor);
+            nameEditText.setTextColor(editTextColor);
+            bioEditText.setTextColor(editTextColor);
+        } else {
+            nameEditText.setInputType(InputType.TYPE_NULL);
+            bioEditText.setInputType(InputType.TYPE_NULL);
+            nameEditText.setTextIsSelectable(true);
+            bioEditText.setTextIsSelectable(true);
+
+            nameEditText.setFocusable(false);
+            bioEditText.setFocusable(false);
+
+            editButton.setVisibility(View.VISIBLE);
+            saveButton.setVisibility(View.GONE);
+            editButton.setAlpha(1.0f);  // Full opacity in normal mode
+
+            // Reset background and text color
+            nameEditText.setBackgroundColor(Color.TRANSPARENT);
+            bioEditText.setBackgroundColor(Color.TRANSPARENT);
+            nameEditText.setTextColor(Color.BLACK);
+            bioEditText.setTextColor(Color.BLACK);
+        }
+    }
+
+    private void saveProfile() {
+        String newName = nameEditText.getText().toString();
+        String newBio = bioEditText.getText().toString();
+
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+        editor.putString(USER_NAME_KEY, newName);
+        editor.putString(USER_BIO_KEY, newBio);
+        editor.apply();
+
+        toggleEditMode();
     }
 }
