@@ -1,9 +1,14 @@
 package si.uni_lj.fe.tnuv;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -27,9 +32,12 @@ import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
 
+import java.util.List;
+import java.util.Locale;
+
 import si.uni_lj.fe.tnuv.databinding.ActivityMainBinding;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LocationListener{
 
     private static final String PREFS_NAME = "SonicSensePrefs";
     private static final String MAX_DB_KEY = "maxDB";
@@ -47,8 +55,10 @@ public class MainActivity extends AppCompatActivity {
     private float overallMaxDB = Float.MIN_VALUE;
     private MapView mapView;
     private PointAnnotationManager pointAnnotationManager;
-
+    LocationManager locationManager;
     ActivityMainBinding binding;
+    private double userLatitude = 0.0;
+    private double userLongitude = 0.0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         mapView = binding.mapView;
+
 
         // Setup Search Bar
         EditText searchBar = findViewById(R.id.search_bar);
@@ -84,6 +95,31 @@ public class MainActivity extends AppCompatActivity {
         overallMaxDB = prefs.getFloat(MAX_DB_KEY, Float.MIN_VALUE);
 
         // Check for RECORD_AUDIO permission
+
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION
+            }, 100);
+        }
+    }
+
+    private void resetMapView() {
+        getLocation();
+        if(userLatitude != 0.0 && userLongitude != 0.0) {
+            mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
+                    .center(Point.fromLngLat(userLongitude, userLatitude)) // Set the center point
+                    .pitch(0.0) // Pitch of the camera
+                    .zoom(2.0) // Zoom level
+                    .bearing(0.0) // Camera bearing
+                    .build());
+        } else {
+            Toast.makeText(this, "Location not yet available", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void showDialog() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -91,18 +127,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             initializeAudio();
         }
-    }
-
-    private void resetMapView() {
-        mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
-                .center(Point.fromLngLat(-98.0, 39.5)) // Set the center point
-                .pitch(0.0) // Pitch of the camera
-                .zoom(2.0) // Zoom level
-                .bearing(0.0) // Camera bearing
-                .build());
-    }
-
-    private void showDialog() {
         final View dialogView = getLayoutInflater().inflate(R.layout.dialog_audio_popup, null);
 
         final TextView audioLevelTextView = dialogView.findViewById(R.id.audio_level_text_view);
@@ -258,4 +282,50 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         mapView.onDestroy();
     }
+
+    @SuppressLint("MissingPermission")
+    private void getLocation() {
+
+        try {
+            locationManager = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, MainActivity.this);
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onLocationChanged(@NonNull android.location.Location location) {
+        userLatitude = location.getLatitude();
+        userLongitude = location.getLongitude();
+        resetMapView();
+        Toast.makeText(this, ""+location.getLatitude()+","+location.getLongitude(), Toast.LENGTH_SHORT).show();
+        try {
+            Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            String address = addresses.get(0).getAddressLine(0);
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        LocationListener.super.onStatusChanged(provider, status, extras);
+    }
+
+    @Override
+    public void onProviderEnabled(@NonNull String provider) {
+        LocationListener.super.onProviderEnabled(provider);
+    }
+
+    @Override
+    public void onProviderDisabled(@NonNull String provider) {
+        LocationListener.super.onProviderDisabled(provider);
+    }
 }
+
