@@ -164,6 +164,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
             new Handler().postDelayed(() -> {
                 stopRecording();
                 maxSoundLevelTextView.setText(String.format("Sound Level: %.2f dB", maxSoundLevel));
+                if (maxSoundLevel > 60) {
+                    maxSoundLevelTextView.setTextColor(ContextCompat.getColor(this, R.color.red));
+                } else {
+                    maxSoundLevelTextView.setTextColor(ContextCompat.getColor(this, R.color.green));
+                }
                 maxSoundLevelTextView.setVisibility(View.VISIBLE);  // Make the TextView visible
                 addressTextView.setText(String.format("Address: %s", getAddress()));
                 addressTextView.setVisibility(View.VISIBLE);

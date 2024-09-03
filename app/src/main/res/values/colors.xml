@@ -3,4 +3,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="badge_achieved_yellow">#ebd637</color>
+    <color name="red">#bf1029</color>
+    <color name="green">#056517</color>
 </resources>
