@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     ActivityMainBinding binding;
     private double userLatitude = 0.0;
     private double userLongitude = 0.0;
+    private String address = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,7 +130,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         }
         final View dialogView = getLayoutInflater().inflate(R.layout.dialog_audio_popup, null);
 
-        final TextView audioLevelTextView = dialogView.findViewById(R.id.audio_level_text_view);
+        final TextView maxSoundLevelTextView = dialogView.findViewById(R.id.max_sound_level_text_view);
+        final TextView addressTextView = dialogView.findViewById(R.id.address_text_view);
+        final TextView quietnessMessageTextView = dialogView.findViewById(R.id.quietness_message_text_view);
         Button startButton = dialogView.findViewById(R.id.start_button);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -141,14 +144,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
 
         startButton.setOnClickListener(v -> {
             if(!isRecording) {
-                startRecording(audioLevelTextView);
+                startRecording(maxSoundLevelTextView, addressTextView, quietnessMessageTextView);
             }
         });
 
         dialog.show();
     }
 
-    private void startRecording(TextView audioLevelTextView) {
+    private void startRecording(TextView maxSoundLevelTextView, TextView addressTextView, TextView quietnessMessageTextView) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_CODE);
@@ -160,8 +163,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
             // Schedule stopping after the duration
             new Handler().postDelayed(() -> {
                 stopRecording();
-                audioLevelTextView.setText(String.format("Max Sound Level: %.2f dB", maxSoundLevel));
-                audioLevelTextView.setVisibility(View.VISIBLE);  // Make the TextView visible
+                maxSoundLevelTextView.setText(String.format("Sound Level: %.2f dB", maxSoundLevel));
+                maxSoundLevelTextView.setVisibility(View.VISIBLE);  // Make the TextView visible
+                addressTextView.setText(String.format("Address: %s", getAddress()));
+                addressTextView.setVisibility(View.VISIBLE);
+
+                quietnessMessageTextView.setText(getQuietnessMessage(maxSoundLevel));
+                quietnessMessageTextView.setVisibility(View.VISIBLE);
                 onRecordingComplete();
                 Log.d(TAG, "Recording stopped and onRecordingComplete called");
             }, RECORD_DURATION_MS);
@@ -304,7 +312,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         try {
             Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
             List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-            String address = addresses.get(0).getAddressLine(0);
+            if (!addresses.isEmpty()) {
+                address = addresses.get(0).getAddressLine(0);
+            }
 
 
         } catch (Exception e) {
@@ -327,5 +337,20 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     public void onProviderDisabled(@NonNull String provider) {
         LocationListener.super.onProviderDisabled(provider);
     }
+
+    private String getAddress() {
+        // Assuming address is stored in userAddress variable
+        return address;
+    }
+
+    private String getQuietnessMessage(float soundLevel) {
+        // You can adjust this threshold as needed
+        if (soundLevel < 60) {
+            return "Your location is quiet and safe for your ears";
+        } else {
+            return "Your location is noisy. Consider using ear protection.";
+        }
+    }
+
 }
 

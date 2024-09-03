@@ -6,11 +6,37 @@
     android:padding="16dp">
 
     <TextView
-        android:id="@+id/audio_level_text_view"
+        android:id="@+id/max_sound_level_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Audio Levels"
         android:layout_gravity="center"
+        android:text="Max Sound Level"
+        android:textAlignment="center"
+        android:textColor="@android:color/holo_red_dark"
+        android:layout_marginTop="12dp"
+        android:textSize="24sp"
+        android:visibility="gone" />
+
+
+    <TextView
+        android:id="@+id/address_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Adress"
+        android:textAlignment="center"
+        android:layout_marginTop="12dp"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/quietness_message_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Your location is quiet and safe for your ears"
+        android:textAlignment="center"
+        android:layout_marginTop="12dp"
         android:textSize="18sp"
         android:visibility="gone" />
 
@@ -21,5 +47,6 @@
         android:layout_gravity="center"
         android:layout_marginTop="24dp"
         android:text="Start" />
+
 
 </LinearLayout>
